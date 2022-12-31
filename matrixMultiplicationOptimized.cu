@@ -8,7 +8,11 @@ CUDA - generate array of random numbers and calculate occurence of odd and even 
 #include <curand_kernel.h>
 
 #define MAX 4
-#define DIMENSION 3
+#define DIMENSION 100
+#define BLK_ROWS 2
+#define BLK_COLS 2
+//size of the share memory tile in the device
+#define TILE_SIZE BLK_ROWS
 
  void initializeMatrix( int* matrix) {
     srand(time(0));
@@ -33,6 +37,12 @@ void clearMatrix( int* matrix) {
 //cuda kernel for multiplying two matrices without tiling
 __global__ void matrix_mul_kernel(int* a, int* b, int* c)
 {
+	//declare shared memory matrices for A and B matrices
+	__shared__ int shared_a_tile[TILE_SIZE][TILE_SIZE];
+	__shared__ int shared_b_tile[TILE_SIZE][TILE_SIZE];
+
+	int tx = threadIdx.x;
+	int ty = threadIdx.y;
 	int col = blockIdx.x * blockDim.x + threadIdx.x;
 	int row = blockIdx.y * blockDim.y + threadIdx.y;
 	
@@ -41,10 +51,26 @@ __global__ void matrix_mul_kernel(int* a, int* b, int* c)
 	{
 		int result = 0;
 		int k;
-		for (k = 0; k < DIMENSION; k++)
+		int phase;
+		
+		//calculate C matrix indexes in phases. Each phase shares 
+		//TILE_SIZE * TILE_SIZE data copied to the shared matrix A 
+		//and matrix B.
+		for (phase = 0; phase <= DIMENSION/TILE_SIZE; phase++)
 		{
-			result += (a[row * DIMENSION + k] * b[k * DIMENSION + col]);
-		}
+			shared_a_tile[ty][tx] = a[row * DIMENSION + phase * TILE_SIZE + tx];
+			shared_b_tile[ty][tx] = b[(phase * TILE_SIZE + ty) * DIMENSION + col];
+			__syncthreads();
+			
+			for (k = 0; k < TILE_SIZE; k++)
+			{
+				if (k + (phase * TILE_SIZE) < DIMENSION) 
+				{
+					result += (shared_a_tile[ty][k] * shared_b_tile[k][tx]);
+				}
+			}
+			__syncthreads();
+		}	
 		c[row * DIMENSION + col] = result;
 	}
 }
@@ -86,18 +112,13 @@ int main(int argc, char **argv)
 	cudaMemcpy(d_mat_a, mat_a, size * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_mat_b, mat_b, size * sizeof(int), cudaMemcpyHostToDevice);
 
-	//execute cuda kernel
-    dim3 threadsPerBlock(DIMENSION, DIMENSION);
-    dim3 blocksPerGrid(1, 1);
-        if (size > 512){
-            threadsPerBlock.x = 512;
-            threadsPerBlock.y = 512;
-            blocksPerGrid.x = ceil(double(DIMENSION)/double(threadsPerBlock.x));
-            blocksPerGrid.y = ceil(double(DIMENSION)/double(threadsPerBlock.y));
-        }
+	//declare dimensions for the grid and block
+	dim3 dimBlock(BLK_COLS,BLK_ROWS);
+	dim3 dimGrid((int)ceil(DIMENSION/BLK_COLS),(int)ceil(DIMENSION/BLK_ROWS));
+
 
     cudaEventRecord(start);
-    matrix_mul_kernel<<<blocksPerGrid,threadsPerBlock>>>(d_mat_a, d_mat_b, d_mat_c);
+    matrix_mul_kernel<<<dimGrid, dimBlock>>>(d_mat_a, d_mat_b, d_mat_c);
     cudaEventRecord(stop);
 
 	//copy the compute matrix C from device to host
