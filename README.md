@@ -1,3 +1,3 @@
 # MatrixMultiplicationGPU
-nvcc mm.cu -o m
-./mm
+`nvcc mm.cu -o m`
+`./mm`
