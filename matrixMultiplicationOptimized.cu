@@ -8,11 +8,9 @@ CUDA - generate array of random numbers and calculate occurence of odd and even 
 #include <curand_kernel.h>
 
 #define MAX 4
-#define DIMENSION 100
-#define BLK_ROWS 2
-#define BLK_COLS 2
+#define DIMENSION 10000
 //size of the share memory tile in the device
-#define TILE_SIZE BLK_ROWS
+#define TILE_SIZE 16
 
  void initializeMatrix( int* matrix) {
     srand(time(0));
@@ -113,8 +111,8 @@ int main(int argc, char **argv)
 	cudaMemcpy(d_mat_b, mat_b, size * sizeof(int), cudaMemcpyHostToDevice);
 
 	//declare dimensions for the grid and block
-	dim3 dimBlock(BLK_COLS,BLK_ROWS);
-	dim3 dimGrid((int)ceil(DIMENSION/BLK_COLS),(int)ceil(DIMENSION/BLK_ROWS));
+	dim3 dimBlock(TILE_SIZE,TILE_SIZE);
+	dim3 dimGrid((int)ceil(DIMENSION/TILE_SIZE),(int)ceil(DIMENSION/TILE_SIZE));
 
 
     cudaEventRecord(start);
@@ -133,39 +131,39 @@ int main(int argc, char **argv)
 	cudaFree(d_mat_b);
 	cudaFree(d_mat_c);
 
-	//print matrix A
-    printf("Matrix A: \n");
-	for (i = 0; i < DIMENSION; i++)
-	{
-		for (j = 0; j < DIMENSION; j++)
-		{
-			printf("%d ", mat_a[i * DIMENSION + j]);
-		}
-		printf("\n");
-	}
-    printf("\n");
-    //print matrix B
-    printf("Matrix B: \n");
-	for (i = 0; i < DIMENSION; i++)
-	{
-		for (j = 0; j < DIMENSION; j++)
-		{
-			printf("%d ", mat_b[i * DIMENSION + j]);
-		}
-		printf("\n");
-	}
-    printf("\n");
-    //print the resulting matrix
-    printf("Matrix C: \n");
-	for (i = 0; i < DIMENSION; i++)
-	{
-		for (j = 0; j < DIMENSION; j++)
-		{
-			printf("%d ", mat_c[i * DIMENSION + j]);
-		}
-		printf("\n");
-	}
-    printf("\n");
+	// //print matrix A
+    // printf("Matrix A: \n");
+	// for (i = 0; i < DIMENSION; i++)
+	// {
+	// 	for (j = 0; j < DIMENSION; j++)
+	// 	{
+	// 		printf("%d ", mat_a[i * DIMENSION + j]);
+	// 	}
+	// 	printf("\n");
+	// }
+    // printf("\n");
+    // //print matrix B
+    // printf("Matrix B: \n");
+	// for (i = 0; i < DIMENSION; i++)
+	// {
+	// 	for (j = 0; j < DIMENSION; j++)
+	// 	{
+	// 		printf("%d ", mat_b[i * DIMENSION + j]);
+	// 	}
+	// 	printf("\n");
+	// }
+    // printf("\n");
+    // //print the resulting matrix
+    // printf("Matrix C: \n");
+	// for (i = 0; i < DIMENSION; i++)
+	// {
+	// 	for (j = 0; j < DIMENSION; j++)
+	// 	{
+	// 		printf("%d ", mat_c[i * DIMENSION + j]);
+	// 	}
+	// 	printf("\n");
+	// }
+    // printf("\n");
     printf("Time [ms]: %f \n", milliseconds);
 }
 
