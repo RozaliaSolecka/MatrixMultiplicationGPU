@@ -1,3 +1,3 @@
 # MatrixMultiplicationGPU
-`nvcc mm.cu -o m`
-`./mm`
+* compile `nvcc mm.cu -o m`
+* run `./mm`
