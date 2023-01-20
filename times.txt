@@ -1,0 +1,14 @@
+mm
+DIMENSION = 10
+Time [ms]: 0.010144
+
+DIMENSION = 10000
+Time [ms]: 571111.562500
+
+mmo
+DIMENSION = 10
+Time [ms]: 0.011264
+
+DIMENSION = 10000
+Time [ms]: 28309.134766
+

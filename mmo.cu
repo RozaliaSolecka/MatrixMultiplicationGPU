@@ -5,7 +5,8 @@
 #include <curand_kernel.h>
 
 #define MAX 4
-#define DIMENSION 10000
+#define DIM 10000
+#define DIMENSION (DIM + (DIM % TILE_SIZE))
 
 #define TILE_SIZE 4
 
@@ -15,7 +16,15 @@
 	{
 		for (int j = 0; j < DIMENSION; j++) 
 		{
-			matrix[i * DIMENSION + j] = rand() % MAX;
+			if (i < DIM && j < DIM) 
+			{
+				matrix[i * DIMENSION + j] = rand() % MAX;
+			}
+			else 
+			{
+				matrix[i * DIMENSION + j] = 0;
+			}
+			
 		}
 	}
 }
@@ -46,7 +55,7 @@ __global__ void matrix_mul_kernel(int* a, int* b, int* c)
 		int k;
 		int phase;
 		
-		for (phase = 0; phase <= DIMENSION/TILE_SIZE; phase++)
+		for (phase = 0; phase < DIMENSION/TILE_SIZE; phase++)
 		{
 			sharedA[ty][tx] = a[row * DIMENSION + phase * TILE_SIZE + tx];
 			sharedB[ty][tx] = b[(phase * TILE_SIZE + ty) * DIMENSION + col];
@@ -69,7 +78,8 @@ __global__ void matrix_mul_kernel(int* a, int* b, int* c)
 int main(int argc, char **argv)
 {
     int size = DIMENSION * DIMENSION;
-
+	//printf("size: %d \n", size);
+	
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
@@ -98,22 +108,8 @@ int main(int argc, char **argv)
 	cudaMemcpy(deviceA, hostA, size * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(deviceB, hostB, size * sizeof(int), cudaMemcpyHostToDevice);
 
-	int tpg;
-	int bpg;
-
-	if(DIMENSION < 100)
-	{
-		tpg = DIMENSION;
-		bpg = 1;
-	}
-	else
-	{
-		tpg = TILE_SIZE;
-		bpg = (int)ceil(DIMENSION/TILE_SIZE);
-	}
-
-	dim3 threadsPerBlock(tpg, tpg);
-	dim3 blocksPerGrid(bpg, bpg);
+	dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
+	dim3 blocksPerGrid((int)DIMENSION/TILE_SIZE, (int)DIMENSION/TILE_SIZE);
 
     cudaEventRecord(start);
     matrix_mul_kernel<<<blocksPerGrid, threadsPerBlock>>>(deviceA, deviceB, deviceC);
@@ -131,9 +127,9 @@ int main(int argc, char **argv)
 
 	// //print matrix A
     // printf("Matrix A: \n");
-	// for (i = 0; i < DIMENSION; i++)
+	// for (i = 0; i < DIM; i++)
 	// {
-	// 	for (j = 0; j < DIMENSION; j++)
+	// 	for (j = 0; j < DIM; j++)
 	// 	{
 	// 		printf("%d ", hostA[i * DIMENSION + j]);
 	// 	}
@@ -142,20 +138,20 @@ int main(int argc, char **argv)
     // printf("\n");
     // //print matrix B
     // printf("Matrix B: \n");
-	// for (i = 0; i < DIMENSION; i++)
+	// for (i = 0; i < DIM; i++)
 	// {
-	// 	for (j = 0; j < DIMENSION; j++)
+	// 	for (j = 0; j < DIM; j++)
 	// 	{
 	// 		printf("%d ", hostB[i * DIMENSION + j]);
 	// 	}
 	// 	printf("\n");
 	// }
     // printf("\n");
-    //print the resulting matrix
+    // //print the resulting matrix
     // printf("Matrix C: \n");
-	// for (i = 0; i < DIMENSION; i++)
+	// for (i = 0; i < DIM; i++)
 	// {
-	// 	for (j = 0; j < DIMENSION; j++)
+	// 	for (j = 0; j < DIM; j++)
 	// 	{
 	// 		printf("%d ", hostC[i * DIMENSION + j]);
 	// 	}

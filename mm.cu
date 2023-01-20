@@ -75,8 +75,8 @@ int main(int argc, char **argv)
 	cudaMemcpy(deviceA, hostA, size * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(deviceB, hostB, size * sizeof(int), cudaMemcpyHostToDevice);
 
-    dim3 threadsPerBlock(2, 2);
-    dim3 blocksPerGrid((int)ceil(DIMENSION/2),(int)ceil(DIMENSION/2));
+    dim3 threadsPerBlock(1, 1);
+    dim3 blocksPerGrid(DIMENSION, DIMENSION);
 
     cudaEventRecord(start);
     matrix_mul_kernel<<<blocksPerGrid,threadsPerBlock>>>(deviceA, deviceB, deviceC);
